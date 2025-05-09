@@ -3,7 +3,6 @@
 
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import {
   Card,
   CardContent,
@@ -23,6 +22,8 @@ import {
   CommandList,
 } from "@/components/ui/command";
 import { cn } from "@/lib/utils";
+import { Dropzone, DropzoneContent, DropzoneEmptyState } from "@/components/dropzone";
+import { useSupabaseUpload } from "@/hooks/use-supabase-upload";
 
 const universities = [
   { value: "harvard", label: "Harvard University" },
@@ -37,11 +38,23 @@ const universities = [
 export default function OnboardingPage() {
   const [university, setUniversity] = useState("");
   const [open, setOpen] = useState(false);
-  const [file, setFile] = useState<File | null>(null);
+
+  // Set up the dropzone for curriculum upload
+  const uploadProps = useSupabaseUpload({
+    bucketName: "organizational-study-data", // Make sure this bucket exists in Supabase
+    path: "uploads",
+    allowedMimeTypes: [
+      "application/pdf",
+      "application/msword",
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    ],
+    maxFiles: 1,
+    maxFileSize: 10 * 1024 * 1024, // 10MB
+  });
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // TODO: Upload file, save university and file URL to Supabase
+    // TODO: Save university and uploaded file info to Supabase
     // Redirect to dashboard after successful onboarding
   };
 
@@ -101,13 +114,10 @@ export default function OnboardingPage() {
             </div>
             <div>
               <Label htmlFor="curriculum">Upload your curriculum</Label>
-              <Input
-                id="curriculum"
-                type="file"
-                accept=".pdf,.doc,.docx"
-                onChange={(e) => setFile(e.target.files?.[0] || null)}
-                required
-              />
+              <Dropzone {...uploadProps} className="mt-2">
+                <DropzoneEmptyState />
+                <DropzoneContent />
+              </Dropzone>
             </div>
           </CardContent>
           <CardFooter>
