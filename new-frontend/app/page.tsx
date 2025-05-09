@@ -1,12 +1,16 @@
 "use client";
 
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Calendar, Clock, Briefcase, Brain, ArrowRight } from "lucide-react";
+import { AuthDialog } from "@/components/auth/auth-dialog";
 
 export default function LandingPage() {
+  const [isAuthDialogOpen, setIsAuthDialogOpen] = useState(false);
+
   const handleAuthClick = () => {
-    console.log("Authentication Incoming");
+    setIsAuthDialogOpen(true);
   };
 
   return (
@@ -98,6 +102,11 @@ export default function LandingPage() {
           </div>
         </div>
       </div>
+
+      <AuthDialog 
+        isOpen={isAuthDialogOpen} 
+        onClose={() => setIsAuthDialogOpen(false)} 
+      />
     </div>
   );
 }
