@@ -1,0 +1,2 @@
+# do not track local non-code stuff
+.DS_store
