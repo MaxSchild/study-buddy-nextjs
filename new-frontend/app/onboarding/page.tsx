@@ -12,9 +12,31 @@ import {
   CardFooter,
 } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
+import { ChevronsUpDown, Check } from "lucide-react";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
+import { cn } from "@/lib/utils";
+
+const universities = [
+  { value: "harvard", label: "Harvard University" },
+  { value: "mit", label: "MIT" },
+  { value: "stanford", label: "Stanford University" },
+  { value: "oxford", label: "University of Oxford" },
+  { value: "cambridge", label: "University of Cambridge" },
+  { value: "tum", label: "Technical University of Munich" },
+  { value: "ethz", label: "ETH Zurich" },
+];
 
 export default function OnboardingPage() {
   const [university, setUniversity] = useState("");
+  const [open, setOpen] = useState(false);
   const [file, setFile] = useState<File | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -33,13 +55,49 @@ export default function OnboardingPage() {
           <CardContent className="space-y-4">
             <div>
               <Label htmlFor="university">Select your university</Label>
-              <Input
-                id="university"
-                value={university}
-                onChange={(e) => setUniversity(e.target.value)}
-                placeholder="e.g. Harvard University"
-                required
-              />
+              <Popover open={open} onOpenChange={setOpen}>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    role="combobox"
+                    aria-expanded={open}
+                    className="w-full justify-between mt-2"
+                  >
+                    {university
+                      ? universities.find((u) => u.value === university)?.label
+                      : "Select university..."}
+                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-full p-0">
+                  <Command>
+                    <CommandInput placeholder="Search university..." />
+                    <CommandList>
+                      <CommandEmpty>No university found.</CommandEmpty>
+                      <CommandGroup>
+                        {universities.map((u) => (
+                          <CommandItem
+                            key={u.value}
+                            value={u.value}
+                            onSelect={(currentValue) => {
+                              setUniversity(currentValue === university ? "" : currentValue);
+                              setOpen(false);
+                            }}
+                          >
+                            <Check
+                              className={cn(
+                                "mr-2 h-4 w-4",
+                                university === u.value ? "opacity-100" : "opacity-0"
+                              )}
+                            />
+                            {u.label}
+                          </CommandItem>
+                        ))}
+                      </CommandGroup>
+                    </CommandList>
+                  </Command>
+                </PopoverContent>
+              </Popover>
             </div>
             <div>
               <Label htmlFor="curriculum">Upload your curriculum</Label>
