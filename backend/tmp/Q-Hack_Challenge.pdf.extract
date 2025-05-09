@@ -1,0 +1,577 @@
+Microsoft
+Exploring Agentic
+Systems and Multi-
+Agent Architectures
+Arianit Sheholli - Cloud Solution Architect
+Efe Sener - Cloud Solution Architect
+Petar Petrov - Cloud Solution Architect
+Slide Credits: MCAPS Tech Connect
+What is an Agent
+Agentic building blocks and patterns
+Agenda
+Single-Agent demo
+Multi-Agent patterns
+Multi-Agent demo
+First wave of
+generative AI Apps
+Common use cases:
+· Conversational chat on private data
+· Text/Document/Audio
+summarization and classification
+· Image description and
+entity extractions
+· Personalized content generation
+Prompt engineering
+RAG pattern
+Application flow is hard-coded
+App UX
+App Server,
+Orchestrator
+Azure Al Search
+Data Sources
+(PDFs, docs, etc.)
+Query >
+Knowledge
+Prompt + Knowledge
+-> Response
+O
+Azure OpenAI
+Next wave: Agents
+Complex interactions
+& orchestration
+· Virtual assistants
+· Customer support
+· Intelligent code editors
+Tools calling
+Many LLM tasks + steps
+undefined sequence = agentic
+reasoning
+Improve efficiency and accuracy
+Ask a question on a topic?
+Search
+Question
+Do web search? First draft response.
+Need more research?
+Do revision on response.
+Iterate for more details?
+Revise, act and respond.
+Revise
+Response
+Iterate
+Research
+Agentic Reasoning
+Agent
+frameworks
+and services
+Semantic Kernel Agent Framework
+Autogen
+Langgraph
+2
+Azure Al Agent Service
+What is an Agent?
+"System that uses a
+LLM to decide the control
+flow of an application."
+Simple
+Autonomy Levels:
+. No Autonomy: Traditional RAG
+. Simple: Paths routing
+· Fully: Multi-step reasoning
+& acting
+Architectures:
+· Single agent
+· Multi agent
+Start
+Step 1
+LLM
+Step 2
+Step 3
+End
+End
+Start
+Fully
+Step n
+…
+Step 2
+Step 1
+End
+LLM
+Reasoning
+Less
+LLM Control
+More
+Agent Abstractions - Agent First-Class Citizen
+Agent as high-level abstraction
+· LLM (gpt4-0, 01 etc.)
+· Persona (system prompt)
+· Tools (function code calls)
+Agent Chat as layer for collaboration
+· Multiple agents can engage with each other
+· Enables multi-turn or parallel execution
+Memory
+Agent
+Tool - 1
+gpt4-o
+Tool - 2
+Persona
+Tool - n
+Agent 1
+Agent 2
+CHAT
+Agent 3
+Agentic Pattern - Tools Calling
+What electronics do you
+have between $10 and $50
+Users
+LLM
+Model
+Tool Calling
+3
+4
+Tool
+Binding
+2
+</>
+</>
+AppCode.class
+Search ( minPrice,
+maxPrice, category )
+Tool Creation
+AppCode.class
+1
+@Tool ( name ='product_search',
+description
+='search for available
+products' )
+Search ( minPrice, maxPrice,
+category )
+{ tool_name: 'product_search'
+tool_args :
+{
+min_price : 10 ,
+max_price: 50,
+category: 'electronics'
+}
+Tool Invocation
+Request
+5
+App
+6
+Tool
+Execution
+Agentic Pattern - ReAct Planning with Tools Calling
+Users
+Pay this bill for me
+Invoice From:
+Organizer Company Name
+Company Adar
+12345 Berlin
+Germany
+VAT ID: EXAMPLE458
+Invoice Ta:
+Ticket Buyer Company Norte
+Richard Fictional
+Ticket Buyer Company Street "
+Avnerslidem, 67890
+Netherlands
+VAT ID: EXAMPLE123
+Eventbrite
+Rechnung
+Invoice Number: 411417740
+Invoice Date: Apr 2. 2018
+Thank you for your order
+€100 1
+Time of Sappig May 12, 2015 - 7:00 PM
+Inteakce Amount:
+bill-abc123.jpeg
+Bill abc123
+successfully paid
+Payment Agent
+Tools:
+· scanlmage ( filename )
+· transactionHistory ( billld )
+· paymentService ( billld,
+Amount, Payee)
+Instructions:
+· You are a home banking
+assistant allowing users
+to pay the bill uploading
+a picture
+· Always check if a bill has
+already been paid before
+submitting a payment
+•
+Confirm the payment result
+Planning
+while ( new tools execution request )
+1
+scanImage
+( bill-abc123.jpeg )
+-
+abc123, 100$, payeename
+2
+transaction History
+( abc123 )
+->
+no results
+3
+paymentService
+(abc123, 100$,payeename)
+-> ok
+Agentic Pattern - Memory
+Short Term
+First Chat Session
+Second Chat Session
+· Access steps info in
+one loop iteration
+· Shared state context
+· Chat history
+Long Term
+· Access steps info in long
+running conversation
+· State persistence
+Conversation History Truncation
+· Trim by tokens
+· Trim by message count
+· Trim + summary (LLM call required)
+User
+Write to
+memory store,
+scoped to user_id
+Chat
+App
+User
+2
+Chat
+App
+Read from
+memory store,
+scoped to user_id
+Memory
+Store
+L
+Memory
+Store
+Payment Agent
+Agentic Pattern -
+Flow control
+Looping Termination
+· MaxIterations
+· Message termination
+· Human step /Human in
+the loop
+Human in the loop
+· Action execution approval
+· Escalation
+· Data review
+User
+Review
+Pay this bill
+for me
+Please approve
+payment
+Proceed
+Bill paid
+Tools Call
+Loop
+Run 2
+Tools Call
+Loop
+scanImage
+transactionService
+Run 1
+× Stop
+scanImage
+transactionService
+paymentService
+Completed
+Getting Started with Agents Using Azure AI Foundry
+User Input
+Azure
+Container App
+App code
+Resource access
+Managed Identity
+Roles:
+AcrPull
+Azure Al Developer
+Monitoring Contributor
+Azure
+Monitor
+Application Insights
+Container Apps Environment
+Azure Al project
+Container Registry
+Key Vault
+Azure Al services
+Azure Al Hub
+Log Analytics Workspace
+Storage account
+Response
+Demo
+Single Agent Architecture - Scaling
+As the system grows you might
+run into scaling challenges
+Too many tools. Tool hallucinations
+Agent context (a.k.a. prompt) grows too much
+and it fails to follow instructions
+Handling complex and dynamics tasks
+spanning different business domains
+Multi agent
+architecture opportunities
+Manageability - Modular agents reduce
+development and testing complexity
+Predictability - More control over application
+flow using structured agents communication
+Flexibility - Ease to incorporate new agents as
+solution domains increase
+Multi Agent Logical Architecture
+Each agent is specialized
+in different tasks or aspects
+of a problem
+Agents can communicate
+and coordinate with each
+other. Structured
+orchestration is crucial
+2 primary categories based
+on orchestration types
+· Vertical Architecture
+· Horizontal Architecture
+User
+Orchestration
+Agent 2
+Tool - 1
+gpt4-o
+Tool - 2
+Memory
+Prompt
+Tool - n
+Agent 1
+Memory
+gpt4-o
+Prompt
+Agent 3
+Tool - 1
+gpt4-o
+Tool - 2
+Memory
+Prompt
+Tool - n
+Agents orchestration and communication styles
+Single Agent
+Network
+Reflection
+Agent 1
+Tool - 1
+worker
+gpt4-o
+Tool - 2
+Prompt
+Tool - n
+reviewer
+Supervisor
+Hierarchical
+Custom
+Semantic
+Kernel Agents
+Reflection multi-agent
+· Coding agents
+· Digital content creation agents
+ChatCompletionAgent
+· Name
+· Instructions
+· Kernel (Services, Plugins)
+Reflection loop with 2 agents
+· Blog post writer
+· Blog post reviewer
+report-agents.py
+writerInstructions =
+You are a blog writer helping to create blog post draft. Consider suggestions when refining an
+idea ...
+blogWriter = ChatCompletionAgent(
+name = "writer",
+instructions = writerInstructions,
+kernel = ... )
+reviewerInstructions =
+determine if the blog post can be published.
+If so, state that it is approved.
+If not, provide insight on how to refine the draft ...
+blogReviewer = ChatCompletionAgent(
+name = "reviewer",
+instructions = reviewerInstructions,
+kernel = ... )
+Semantic
+Kernel Agents
+Agents participate in
+conversations in a
+AgentGroupChat
+Agents loop is bound by max
+iterations limit
+report-agents.py
+// Create a chat for agents interaction.
+chat = AgentGroupChat(
+agents=[agent_writer, agent_reviewer],
+selection_strategy=KernelFunctionSelectionStrategy(
+function=selection_function,
+kernel =...
+result_parser =... ,
+agent_variable_name="agents",
+history_variable_name="history",
+),
+termination_strategy=Kernel FunctionTerminationStrategy(
+agents=[agent_reviewer],
+function=termination_function,
+kernel =... ,
+result_parser =... ,
+history_variable_name="history",
+maximum_iterations=10, // Limit total number of turns
+)
+)
+Semantic
+Kernel Agents
+Termination based on reviewer
+agent response evaluation
+report-agents.py
+// Terminate when the reviewer message contains the term "approve"
+TERMINATION_KEYWORD = "yes"
+termination_function = Kernel FunctionFromPrompt(
+function_name="termination",
+prompt=f"""
+Examine the RESPONSE and determine whether the content has been deemed satisfactory.
+If content is satisfactory, respond with a single word without explanation:
+{TERMINATION_KEYWORD}.
+If specific suggestions are being provided, it is not satisfactory.
+If no correction is suggested, it is satisfactory.
+RESPONSE:
+{{{{$history}}}}
+)
+Demo
+aka.ms/agentic-playground
+aka.ms/semantic-kernel-examples
+Front end
+Web app
+Upload files, track
+progress, view translated
+code, session history
+Modernize your code
+Backend
+Azure Container apps
+Semantic Kernel
+Migrator agent
+0
+Fixer agent
+Semantic
+checker agent
+Backend
+Picker agent
+</>
+Syntax checker agent
+Azure Al Foundry
+LLM models
+Storage
+Azure Cosmos DB
+Session history
+Blob storage
+Web app
+Backend
+Modernize your code
+Semantic Kernel
+1
+3n
+Fixer agent
+4
+Semantic
+checker agent
+Partially equivalent SQL
+Fully equivalent SQL
+Migrator agent
+Runnable SQL
+Converted SQL candidates
+LLM models
+Blob storage
+Partially equivalent SQL metadata
+Fully equivalent SQL metadata
+Iteration SQL
+2
+Picker agent
+3
+Translated SQL -
+:/>
+Syntax checker
+agent
+No runnable syntax,
+conversion failed
+Runnable syntax
+Conversion logs and metadata
+Azure Cosmos DB
+- Failed conversion
+- Successful conversion
+Partial conversion
+Multi-Agent Implementation Key Learnings
+When to
+use agents
+Flexible user tasks requiring multiple skills
+and domains on the backend
+Customer support scenarios, intelligent code
+editors, personalized digital content creation
+Tradeoff:
+Latency + Cost vs Flexibility + Quality
+Do I need agent
+frameworks to start?
+Most are experimental - Semantic Kernel
+Agents are now Generally Available
+Option 1: Use an agent framework. SK for
+production, Autogen for AI state of the art
+Option 2: Use simple and composable apis like
+memory and tools in AI frameworks. Implement
+multi-agent conversation boilerplate code
+Multi-Agent Implementation Key Learnings
+Multi-agent autonomy
+and predictability friction
+2 levels: Agent autonomy and multi-agent
+collaboration autonomy
+Avoid tools hallucination: wrong tools, pre-fabricated,
+wrong calls sequence, wrong params
+Well documented tools. Consistent api
+methods naming
+Human-in-the-loop as your safety net
+Predictable multi-agent conversations: share tools
+among agents, max loop iterations
+Challenge:
+Build Your Own AI Agents
+to Simplify Student Life
+Agent
+frameworks
+and services
+Semantic Kernel Agent Framework
+Autogen
+Langgraph
+Azure Al Agent Service
+Azure Al Services
+Classified as Microsoft Confidential
+Deliverables
+Working solution of your web application
+Presentation of your solution
+Technical & Business Overview
+Classified as Microsoft Confidential
+Provided Resources
+Access to the Azure Cloud
+Microsoft Coaches to help along the way
+Classified as Microsoft Confidential
+1
+Semantic Kernel Agents
+Semantic Kernel Agent Framework
+Building-multi-agent-systems-with-semantic-kernel
+Resources
+2
+Autogen
+AutoGen v0.4: Reimagining the foundation of agentic AI for scale
+Microsoft's Agentic Frameworks: AutoGen and Semantic Kernel
+3
+Azure AI Agent Service
+Azure AI Agent Service
+Using Azure AI Agent Service with AutoGen/Semantic Kernel
+4
+AI Templates
+AI Templates Gallery
+Q&A
