@@ -36,7 +36,24 @@ export function SignInForm() {
         setError(error.message);
       } else {
         // Redirect to dashboard or home page after successful sign in
-        window.location.href = "/dashboard";
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
+        if (!user) {
+          setError("User not found");
+          return;
+        }
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("university, curriculum_url")
+          .eq("user_id", user.id)
+          .single();
+
+        if (!profile || !profile.university || !profile.curriculum_url) {
+          window.location.href = "/onboarding";
+        } else {
+          window.location.href = "/dashboard";
+        }
       }
     } catch {
       setError("An unexpected error occurred");
