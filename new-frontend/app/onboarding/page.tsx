@@ -56,6 +56,7 @@ export default function OnboardingPage() {
     e.preventDefault();
     // TODO: Save university and uploaded file info to Supabase
     // Redirect to dashboard after successful onboarding
+    window.location.href = "/dashboard";
   };
 
   return (
@@ -112,7 +113,7 @@ export default function OnboardingPage() {
                 </PopoverContent>
               </Popover>
             </div>
-            <div>
+            <div className="mb-6">
               <Label htmlFor="curriculum">Upload your curriculum</Label>
               <Dropzone {...uploadProps} className="mt-2">
                 <DropzoneEmptyState />
