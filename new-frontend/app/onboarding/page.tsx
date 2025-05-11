@@ -11,7 +11,7 @@ import {
   CardFooter,
 } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
-import { ChevronsUpDown, Check } from "lucide-react";
+import { ChevronsUpDown, Check, Loader2 } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
   Command,
@@ -24,6 +24,8 @@ import {
 import { cn } from "@/lib/utils";
 import { Dropzone, DropzoneContent, DropzoneEmptyState } from "@/components/dropzone";
 import { useSupabaseUpload } from "@/hooks/use-supabase-upload";
+import { createClient } from "@/lib/supabase/client";
+import { useRouter } from "next/navigation";
 
 const universities = [
   { value: "harvard", label: "Harvard University" },
@@ -38,6 +40,9 @@ const universities = [
 export default function OnboardingPage() {
   const [university, setUniversity] = useState("");
   const [open, setOpen] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const router = useRouter();
 
   // Set up the dropzone for curriculum upload
   const uploadProps = useSupabaseUpload({
@@ -54,9 +59,55 @@ export default function OnboardingPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // TODO: Save university and uploaded file info to Supabase
-    // Redirect to dashboard after successful onboarding
-    window.location.href = "/dashboard";
+    setLoading(true);
+    setError(null);
+
+    try {
+      // First, upload the file if there is one
+      if (uploadProps.files.length > 0) {
+        await uploadProps.onUpload();
+        if (uploadProps.errors.length > 0) {
+          throw new Error("Failed to upload file");
+        }
+      }
+
+      // Get the current user
+      const supabase = createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (!user) {
+        throw new Error("User not found");
+      }
+
+      // Get the file URL if a file was uploaded
+      let curriculumUrl = null;
+      if (uploadProps.successes.length > 0) {
+        const { data: { publicUrl } } = supabase.storage
+          .from("organizational-study-data")
+          .getPublicUrl(`uploads/${uploadProps.successes[0]}`);
+        curriculumUrl = publicUrl;
+      }
+
+      // Save the profile data
+      const { error: profileError } = await supabase
+        .from("profiles")
+        .upsert({
+          id: user.id,
+          university: universities.find(u => u.value === university)?.label || university,
+          curriculum_url: curriculumUrl,
+        });
+
+      if (profileError) {
+        throw new Error("Failed to save profile data");
+      }
+
+      // Redirect to dashboard on success
+      router.push("/dashboard");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "An unexpected error occurred");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -120,10 +171,24 @@ export default function OnboardingPage() {
                 <DropzoneContent />
               </Dropzone>
             </div>
+            {error && (
+              <div className="text-sm text-red-500 mt-2">{error}</div>
+            )}
           </CardContent>
           <CardFooter>
-            <Button type="submit" className="w-full">
-              Continue
+            <Button 
+              type="submit" 
+              className="w-full" 
+              disabled={loading || !university}
+            >
+              {loading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Saving...
+                </>
+              ) : (
+                "Continue"
+              )}
             </Button>
           </CardFooter>
         </form>
