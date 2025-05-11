@@ -2,6 +2,7 @@
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { LogOut } from "lucide-react";
+import { UserProfile } from "@/components/user-profile";
 
 export default function DashboardLayout({
   children,
@@ -43,7 +44,10 @@ export default function DashboardLayout({
             </ul>
           </nav>
         </div>
-        <LogoutButton />
+        <div className="space-y-2">
+          <UserProfile />
+          <LogoutButton />
+        </div>
       </aside>
       <main className="flex-1 bg-white p-8">{children}</main>
     </div>
