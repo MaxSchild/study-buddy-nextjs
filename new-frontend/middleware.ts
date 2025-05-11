@@ -49,24 +49,6 @@ export async function middleware(request: NextRequest) {
     }
   }
 
-  // If there's a session and the user is trying to access the landing page
-  if (session && request.nextUrl.pathname === '/') {
-    // Check if user has completed onboarding
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('university, curriculum_url')
-      .eq('user_id', session.user.id)
-      .single()
-
-    if (!profile || !profile.university || !profile.curriculum_url) {
-      // Redirect to onboarding if profile is incomplete
-      return NextResponse.redirect(new URL('/onboarding', request.url))
-    }
-
-    // Redirect to dashboard if profile is complete
-    return NextResponse.redirect(new URL('/dashboard', request.url))
-  }
-
   return response
 }
 

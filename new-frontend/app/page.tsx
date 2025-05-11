@@ -1,17 +1,57 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Calendar, Clock, Briefcase, Brain, ArrowRight } from "lucide-react";
 import { AuthDialog } from "@/components/auth/auth-dialog";
+import { createClient } from "@/lib/supabase/client";
+import { useRouter } from "next/navigation";
 
 export default function LandingPage() {
   const [isAuthDialogOpen, setIsAuthDialogOpen] = useState(false);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [isProfileComplete, setIsProfileComplete] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const router = useRouter();
+
+  useEffect(() => {
+    async function checkAuth() {
+      const supabase = createClient();
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (session) {
+        setIsAuthenticated(true);
+        // Check if profile is complete
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('university, curriculum_url')
+          .eq('user_id', session.user.id)
+          .single();
+        
+        setIsProfileComplete(!!(profile?.university && profile?.curriculum_url));
+      }
+      setIsLoading(false);
+    }
+    checkAuth();
+  }, []);
 
   const handleAuthClick = () => {
-    setIsAuthDialogOpen(true);
+    if (isAuthenticated) {
+      // Redirect based on profile completion
+      router.push(isProfileComplete ? '/dashboard' : '/onboarding');
+    } else {
+      setIsAuthDialogOpen(true);
+    }
   };
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-b from-white to-gray-50 flex items-center justify-center">
+        <div className="animate-pulse text-lg text-gray-600">Loading...</div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-white to-gray-50">
@@ -29,7 +69,9 @@ export default function LandingPage() {
             className="mt-8 px-8 py-6 text-lg bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
             onClick={handleAuthClick}
           >
-            Get Started
+            {isAuthenticated 
+              ? (isProfileComplete ? "Go to Dashboard" : "Complete Onboarding")
+              : "Get Started"}
             <ArrowRight className="ml-2 h-5 w-5" />
           </Button>
         </div>
@@ -91,7 +133,9 @@ export default function LandingPage() {
               className="mt-4"
               onClick={handleAuthClick}
             >
-              Try it Now
+              {isAuthenticated 
+                ? (isProfileComplete ? "Go to Dashboard" : "Complete Onboarding")
+                : "Try it Now"}
               <ArrowRight className="ml-2 h-4 w-4" />
             </Button>
           </div>
