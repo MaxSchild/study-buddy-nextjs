@@ -1,7 +1,7 @@
 "use client"; // TODOEliminate use client from here and put it closer to the subcomponent that needs it
 import Link from "next/link";
 import { cn } from "@/lib/utils";
-import { LogOut } from "lucide-react";
+import { LogOut, Database } from "lucide-react";
 import { UserProfile } from "@/components/user-profile";
 
 export default function DashboardLayout({
@@ -39,6 +39,16 @@ export default function DashboardLayout({
                   )}
                 >
                   📄 Job Application
+                </Link>
+              </li>
+              <li>
+                <Link
+                  href="/dashboard/data"
+                  className={cn(
+                    "text-gray-900 hover:text-blue-600 transition-colors flex items-center gap-2 font-medium"
+                  )}
+                >
+                  <Database className="h-5 w-5" /> Data
                 </Link>
               </li>
             </ul>
