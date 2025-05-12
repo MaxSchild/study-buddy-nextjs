@@ -1,164 +1,185 @@
 "use client";
 
-import { useCallback, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
+//import { useCallback, useEffect, useMemo, useState, useRef } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import {
+  type FileError,
+  type FileRejection,
+  useDropzone,
+} from "react-dropzone";
 
-export interface SupabaseUploadFile {
-  name: string;
-  size: number;
-  type: string;
-  file: File;
+interface FileWithPreview extends File {
   preview?: string;
-  errors: { message: string }[];
+  errors: readonly FileError[];
 }
 
-export interface UseSupabaseUploadReturn {
-  files: SupabaseUploadFile[];
-  setFiles: (files: SupabaseUploadFile[]) => void;
-  onUpload: () => Promise<void>;
-  loading: boolean;
-  successes: string[];
-  errors: { name: string; message: string }[];
-  maxFileSize: number;
-  maxFiles: number;
-  allowedMimeTypes: string[];
-  isSuccess: boolean;
-  isDragActive: boolean;
-  isDragReject: boolean;
-  getRootProps: (props?: React.HTMLAttributes<HTMLDivElement>) => React.HTMLAttributes<HTMLDivElement>;
-  getInputProps: (props?: React.InputHTMLAttributes<HTMLInputElement>) => React.InputHTMLAttributes<HTMLInputElement>;
-  inputRef: React.RefObject<HTMLInputElement | null>;
-}
-
-interface UseSupabaseUploadOptions {
+type UseSupabaseUploadOptions = {
   bucketName: string;
-  path: string;
+  path?: string;
+  userId?: string;
   allowedMimeTypes?: string[];
-  maxFiles?: number;
   maxFileSize?: number;
-}
+  maxFiles?: number;
+  cacheControl?: number;
+  upsert?: boolean;
+};
 
-export function useSupabaseUpload({
-  bucketName,
-  path,
-  allowedMimeTypes = [
-    "application/pdf",
-    "application/msword",
-    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-  ],
-  maxFiles = 1,
-  maxFileSize = 10 * 1024 * 1024, // 10MB
-}: UseSupabaseUploadOptions): UseSupabaseUploadReturn {
-  const [files, setFiles] = useState<SupabaseUploadFile[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [successes, setSuccesses] = useState<string[]>([]);
+type UseSupabaseUploadReturn = ReturnType<typeof useSupabaseUpload>;
+
+const useSupabaseUpload = (options: UseSupabaseUploadOptions) => {
+  const {
+    bucketName,
+    path,
+    userId,
+    allowedMimeTypes = [],
+    maxFileSize = Number.POSITIVE_INFINITY,
+    maxFiles = 1,
+    cacheControl = 3600,
+    upsert = false,
+  } = options;
+
+  const [files, setFiles] = useState<FileWithPreview[]>([]);
+  const [loading, setLoading] = useState<boolean>(false);
   const [errors, setErrors] = useState<{ name: string; message: string }[]>([]);
-  const [isSuccess, setIsSuccess] = useState(false);
-  const [isDragActive, setIsDragActive] = useState(false);
-  const [isDragReject] = useState(false); // Not used, but kept for interface compatibility
-  const inputRef = useRef<HTMLInputElement | null>(null);
+  const [successes, setSuccesses] = useState<string[]>([]);
+  //const inputRef = useRef<HTMLInputElement | null>(null)
+
+  const isSuccess = useMemo(() => {
+    if (errors.length === 0 && successes.length === 0) {
+      return false;
+    }
+    if (errors.length === 0 && successes.length === files.length) {
+      return true;
+    }
+    return false;
+  }, [errors.length, successes.length, files.length]);
+
+  const onDrop = useCallback(
+    (acceptedFiles: File[], fileRejections: FileRejection[]) => {
+      const validFiles = acceptedFiles
+        .filter((file) => !files.find((x) => x.name === file.name))
+        .map((file) => {
+          (file as FileWithPreview).preview = URL.createObjectURL(file);
+          (file as FileWithPreview).errors = [];
+          return file as FileWithPreview;
+        });
+
+      const invalidFiles = fileRejections.map(({ file, errors }) => {
+        (file as FileWithPreview).preview = URL.createObjectURL(file);
+        (file as FileWithPreview).errors = errors;
+        return file as FileWithPreview;
+      });
+
+      const newFiles = [...files, ...validFiles, ...invalidFiles];
+
+      setFiles(newFiles);
+    },
+    [files, setFiles]
+  );
+
+  const dropzoneProps = useDropzone({
+    onDrop,
+    noClick: true,
+    accept: allowedMimeTypes.reduce(
+      (acc, type) => ({ ...acc, [type]: [] }),
+      {}
+    ),
+    maxSize: maxFileSize,
+    maxFiles: maxFiles,
+    multiple: maxFiles !== 1,
+  });
 
   const onUpload = useCallback(async () => {
     setLoading(true);
-    setErrors([]);
-    setSuccesses([]);
-    setIsSuccess(false);
+
+    // [Joshen] This is to support handling partial successes
+    // If any files didn't upload for any reason, hitting "Upload" again will only upload the files that had errors
+    const filesWithErrors = errors.map((x) => x.name);
+    const filesToUpload =
+      filesWithErrors.length > 0
+        ? [
+            ...files.filter((f) => filesWithErrors.includes(f.name)),
+            ...files.filter((f) => !successes.includes(f.name)),
+          ]
+        : files;
+
     const supabase = createClient();
-    const uploaded: string[] = [];
-    const uploadErrors: { name: string; message: string }[] = [];
-    for (const fileObj of files) {
-      if (fileObj.errors.length > 0) continue;
-      const { error } = await supabase.storage.from(bucketName).upload(`${path}/${fileObj.name}`, fileObj.file, {
-        cacheControl: "3600",
-        upsert: true,
-      });
-      if (error) {
-        uploadErrors.push({ name: fileObj.name, message: error.message });
-      } else {
-        uploaded.push(fileObj.name);
-      }
-    }
-    setSuccesses(uploaded);
-    setErrors(uploadErrors);
-    setIsSuccess(uploaded.length > 0 && uploadErrors.length === 0);
+    const responses = await Promise.all(
+      filesToUpload.map(async (file) => {
+        let uploadPath = file.name;
+        if (userId) {
+          uploadPath = `${userId}/${file.name}`;
+        }
+        if (path) {
+          uploadPath = `${path}/${uploadPath}`;
+        }
+        const { error } = await supabase.storage
+          .from(bucketName)
+          .upload(uploadPath, file, {
+            cacheControl: cacheControl.toString(),
+            upsert,
+          });
+        if (error) {
+          return { name: file.name, message: error.message };
+        } else {
+          return { name: file.name, message: undefined };
+        }
+      })
+    );
+
+    const responseErrors = responses.filter((x) => x.message !== undefined);
+    setErrors(responseErrors);
+
+    const responseSuccesses = responses.filter((x) => x.message === undefined);
+    const newSuccesses = Array.from(
+      new Set([...successes, ...responseSuccesses.map((x) => x.name)])
+    );
+    setSuccesses(newSuccesses);
+
     setLoading(false);
-  }, [files, bucketName, path]);
+  }, [files, path, bucketName, errors, successes, cacheControl, upsert, userId]);
 
-  const getRootProps = (
-    props: React.HTMLAttributes<HTMLDivElement> = {}
-  ): React.HTMLAttributes<HTMLDivElement> => ({
-    ...props,
-    onDragOver: (e: React.DragEvent) => {
-      e.preventDefault();
-      setIsDragActive(true);
-    },
-    onDragLeave: (e: React.DragEvent) => {
-      e.preventDefault();
-      setIsDragActive(false);
-    },
-    onDrop: (e: React.DragEvent) => {
-      e.preventDefault();
-      setIsDragActive(false);
-      const droppedFiles = Array.from(e.dataTransfer.files);
-      handleFiles(droppedFiles);
-    },
-    tabIndex: 0,
-    role: "button",
-  });
+  useEffect(() => {
+    if (files.length === 0) {
+      setErrors([]);
+    }
 
-  const getInputProps = (
-    props: React.InputHTMLAttributes<HTMLInputElement> = {}
-  ): React.InputHTMLAttributes<HTMLInputElement> => ({
-    ...props,
-    type: "file",
-    multiple: maxFiles > 1,
-    accept: allowedMimeTypes.join(","),
-    onChange: (e: React.ChangeEvent<HTMLInputElement>) => {
-      const selectedFiles = Array.from(e.target.files || []);
-      handleFiles(selectedFiles);
-    },
-    style: { display: "none" },
-  });
-
-  function handleFiles(selectedFiles: File[]) {
-    let newFiles: SupabaseUploadFile[] = [];
-    for (const file of selectedFiles) {
-      const errors: { message: string }[] = [];
-      if (!allowedMimeTypes.includes(file.type)) {
-        errors.push({ message: "Invalid file type" });
-      }
-      if (file.size > maxFileSize) {
-        errors.push({ message: `File is larger than ${maxFileSize / 1024 / 1024}MB` });
-      }
-      newFiles.push({
-        name: file.name,
-        size: file.size,
-        type: file.type,
-        file,
-        errors,
+    // If the number of files doesn't exceed the maxFiles parameter, remove the error 'Too many files' from each file
+    if (files.length <= maxFiles) {
+      let changed = false;
+      const newFiles = files.map((file) => {
+        if (file.errors.some((e) => e.code === "too-many-files")) {
+          file.errors = file.errors.filter((e) => e.code !== "too-many-files");
+          changed = true;
+        }
+        return file;
       });
+      if (changed) {
+        setFiles(newFiles);
+      }
     }
-    if (newFiles.length + files.length > maxFiles) {
-      newFiles = newFiles.slice(0, maxFiles - files.length);
-    }
-    setFiles([...files, ...newFiles]);
-  }
+  }, [files.length, setFiles, maxFiles]);
 
   return {
     files,
     setFiles,
-    onUpload,
-    loading,
     successes,
-    errors,
-    maxFileSize,
-    maxFiles,
-    allowedMimeTypes,
     isSuccess,
-    isDragActive,
-    isDragReject,
-    getRootProps,
-    getInputProps,
-    inputRef,
+    loading,
+    errors,
+    setErrors,
+    onUpload,
+    maxFileSize: maxFileSize,
+    maxFiles: maxFiles,
+    allowedMimeTypes,
+    //inputRef,
+    ...dropzoneProps,
   };
-} 
+};
+
+export {
+  useSupabaseUpload,
+  type UseSupabaseUploadOptions,
+  type UseSupabaseUploadReturn,
+};

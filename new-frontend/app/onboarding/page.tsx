@@ -1,7 +1,7 @@
 // new-frontend/app/onboarding/page.tsx
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -42,18 +42,31 @@ export default function OnboardingPage() {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [userId, setUserId] = useState<string | null>(null);
+  const [submitted, setSubmitted] = useState(false);
   const router = useRouter();
 
-  // Set up the dropzone for curriculum upload
+  // Fetch user ID on mount
+  useEffect(() => {
+    async function fetchUserId() {
+      const supabase = createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      setUserId(user?.id || null);
+    }
+    fetchUserId();
+  }, []);
+
+  // Set up the dropzone for curriculum upload (only when userId is available)
   const uploadProps = useSupabaseUpload({
-    bucketName: "organizational-study-data", // Make sure this bucket exists in Supabase
+    bucketName: "organizational-study-data",
     path: "uploads",
+    userId: userId || undefined,
     allowedMimeTypes: [
       "application/pdf",
       "application/msword",
       "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
     ],
-    maxFiles: 1,
+    maxFiles: 5,
     maxFileSize: 10 * 1024 * 1024, // 10MB
   });
 
@@ -101,6 +114,7 @@ export default function OnboardingPage() {
         throw new Error("Failed to save profile data");
       }
 
+      setSubmitted(true);
       // Redirect to dashboard on success
       router.push("/dashboard");
     } catch (err) {
@@ -166,10 +180,24 @@ export default function OnboardingPage() {
             </div>
             <div className="mb-6">
               <Label htmlFor="curriculum">Upload your curriculum</Label>
-              <Dropzone {...uploadProps} className="mt-2">
-                <DropzoneEmptyState />
-                <DropzoneContent />
-              </Dropzone>
+              {userId ? (
+                submitted ? (
+                  <div className="p-4 bg-green-50 text-green-700 rounded-lg text-center mt-2">
+                    Redirecting...
+                  </div>
+                ) : uploadProps.isSuccess ? (
+                  <div className="p-4 bg-green-50 text-green-700 rounded-lg text-center mt-2">
+                    Files uploaded successfully!
+                  </div>
+                ) : (
+                  <Dropzone {...uploadProps} className="mt-2">
+                    <DropzoneEmptyState />
+                    <DropzoneContent />
+                  </Dropzone>
+                )
+              ) : (
+                <div className="text-sm text-gray-500 mt-2">Loading user info...</div>
+              )}
             </div>
             {error && (
               <div className="text-sm text-red-500 mt-2">{error}</div>
@@ -179,7 +207,7 @@ export default function OnboardingPage() {
             <Button 
               type="submit" 
               className="w-full" 
-              disabled={loading || !university}
+              disabled={loading || !university || !uploadProps.isSuccess}
             >
               {loading ? (
                 <>
