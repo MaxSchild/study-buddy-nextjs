@@ -80,7 +80,7 @@ export function SignUpForm() {
           </div>
           {error && <div className="text-sm text-red-500">{error}</div>}
         </CardContent>
-        <CardFooter>
+        <CardFooter className="mt-4">
           <Button type="submit" className="w-full" disabled={loading}>
             {loading ? "Creating account..." : "Sign Up"}
           </Button>
