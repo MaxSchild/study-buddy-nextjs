@@ -11,60 +11,71 @@ interface Profile {
   curriculum_url: string | null;
 }
 
-// Mock data for additional files
-const mockFiles = [
-  {
-    id: 1,
-    name: "Academic Transcript.pdf",
-    type: "application/pdf",
-    size: "1.8 MB",
-    uploadDate: "2024-03-10",
-    url: "#", // Will be replaced with actual file URL
-  },
-  {
-    id: 2,
-    name: "Cover Letter.docx",
-    type: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-    size: "0.8 MB",
-    uploadDate: "2024-03-05",
-    url: "#", // Will be replaced with actual file URL
-  },
-];
+// Define a type for Supabase Storage files
+interface SupabaseFile {
+  id?: string;
+  name: string;
+  updated_at?: string;
+  created_at?: string;
+  last_accessed_at?: string;
+  metadata?: {
+    size?: number;
+    mimetype?: string;
+    cacheControl?: string;
+    [key: string]: unknown;
+  };
+  url: string;
+}
 
 export default function DataPage() {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [uploadedFiles, setUploadedFiles] = useState<SupabaseFile[]>([]);
 
   useEffect(() => {
-    async function fetchProfile() {
+    async function fetchProfileAndFiles() {
       try {
         const supabase = createClient();
         const { data: { user } } = await supabase.auth.getUser();
-        
         if (!user) {
           throw new Error("User not found");
         }
-
+        // Fetch profile
         const { data, error: profileError } = await supabase
           .from("profiles")
           .select("university, curriculum_url")
           .eq("id", user.id)
           .single();
-
         if (profileError) {
           throw new Error("Failed to fetch profile data");
         }
-
         setProfile(data);
+        // Fetch uploaded files from user's folder in bucket
+        const { data: files, error: listError } = await supabase.storage
+          .from("organizational-study-data")
+          .list(`uploads/${user.id}`, { limit: 100 });
+        if (listError) {
+          throw new Error("Failed to fetch uploaded files");
+        }
+        // Get public URLs for each file
+        const filesWithUrls: SupabaseFile[] = (files || []).map((file) => {
+          const { data: { publicUrl } } = supabase.storage
+            .from("organizational-study-data")
+            .getPublicUrl(`uploads/${user.id}/${file.name}`);
+          return {
+            ...file,
+            url: publicUrl,
+          };
+        });
+        setUploadedFiles(filesWithUrls);
       } catch (err) {
         setError(err instanceof Error ? err.message : "An unexpected error occurred");
       } finally {
         setIsLoading(false);
       }
     }
-
-    fetchProfile();
+    fetchProfileAndFiles();
   }, []);
 
   if (isLoading) {
@@ -113,63 +124,34 @@ export default function DataPage() {
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            {/* Real curriculum file from profile */}
-            {profile?.curriculum_url && (
-              <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-                <div className="flex items-center gap-4">
-                  <FileText className="h-8 w-8 text-gray-400" />
-                  <div>
-                    <p className="font-medium">Curriculum</p>
-                    <p className="text-sm text-gray-500">
-                      Uploaded curriculum file
-                    </p>
-                  </div>
-                </div>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="flex items-center gap-2"
-                  onClick={() => {
-                    if (profile.curriculum_url) {
-                      window.open(profile.curriculum_url, '_blank');
-                    }
-                  }}
+            {/* List all uploaded files */}
+            {uploadedFiles.length > 0 ? (
+              uploadedFiles.map((file) => (
+                <div
+                  key={file.id || file.name}
+                  className="flex items-center justify-between p-4 bg-gray-50 rounded-lg"
                 >
-                  <Download className="h-4 w-4" />
-                  Download
-                </Button>
-              </div>
-            )}
-
-            {/* Mock files */}
-            {mockFiles.map((file) => (
-              <div
-                key={file.id}
-                className="flex items-center justify-between p-4 bg-gray-50 rounded-lg"
-              >
-                <div className="flex items-center gap-4">
-                  <FileText className="h-8 w-8 text-gray-400" />
-                  <div>
-                    <p className="font-medium">{file.name}</p>
-                    <p className="text-sm text-gray-500">
-                      {file.size} • Uploaded on {file.uploadDate}
-                    </p>
+                  <div className="flex items-center gap-4">
+                    <FileText className="h-8 w-8 text-gray-400" />
+                    <div>
+                      <p className="font-medium">{file.name}</p>
+                      <p className="text-sm text-gray-500">
+                        {file.metadata && file.metadata.size ? `${(file.metadata.size / 1024).toFixed(2)} KB` : ''}
+                      </p>
+                    </div>
                   </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="flex items-center gap-2"
+                    onClick={() => window.open(file.url, '_blank')}
+                  >
+                    <Download className="h-4 w-4" />
+                    Download
+                  </Button>
                 </div>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="flex items-center gap-2"
-                  onClick={() => window.open(file.url, '_blank')}
-                >
-                  <Download className="h-4 w-4" />
-                  Download
-                </Button>
-              </div>
-            ))}
-
-            {/* Show message if no files at all */}
-            {!profile?.curriculum_url && mockFiles.length === 0 && (
+              ))
+            ) : (
               <p className="text-gray-500 text-center py-4">No files uploaded yet</p>
             )}
           </div>
