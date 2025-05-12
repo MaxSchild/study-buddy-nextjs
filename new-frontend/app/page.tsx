@@ -29,9 +29,17 @@ export default function LandingPage() {
           .eq("id", user.id)
           .single();
 
+        let hasCurriculumFiles = false;
+        if (profile?.university) {
+          // Check if there are any files in the user's curriculum folder
+          const { data: files } = await supabase.storage
+            .from("organizational-study-data")
+            .list(`uploads/${user.id}`, { limit: 1 });
+          hasCurriculumFiles = !!files && files.length > 0;
+        }
+
         setIsProfileComplete(
-          //!!(profile?.university && profile?.curriculum_url)
-          !!profile?.university // TODO: Remove this once we have a curriculum_url (after we fixed the dropzone behaviour )
+          !!profile?.university && hasCurriculumFiles
         );
       }
       setIsLoading(false);
