@@ -12,8 +12,10 @@ export function UserProfile() {
   useEffect(() => {
     async function getUser() {
       const supabase = createClient();
-      const { data: { user } } = await supabase.auth.getUser();
-      setUser(user);
+      const { data: { user }, error } = await supabase.auth.getUser();
+      if (!error && user) {
+        setUser(user);
+      }
       setLoading(false);
     }
     getUser();

@@ -27,33 +27,34 @@ export function SignInForm() {
 
     try {
       const supabase = createClient();
-      const { error } = await supabase.auth.signInWithPassword({
+      const { error: signInError } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
 
-      if (error) {
-        setError(error.message);
-      } else {
-        // Redirect to dashboard or home page after successful sign in
-        const {
-          data: { user },
-        } = await supabase.auth.getUser();
-        if (!user) {
-          setError("User not found");
-          return;
-        }
-        const { data: profile } = await supabase
-          .from("profiles")
-          .select("university, curriculum_url")
-          .eq("user_id", user.id)
-          .single();
+      if (signInError) {
+        setError(signInError.message);
+        return;
+      }
 
-        if (!profile || !profile.university || !profile.curriculum_url) {
-          window.location.href = "/onboarding";
-        } else {
-          window.location.href = "/dashboard";
-        }
+      // Get user after successful sign in
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      
+      if (userError || !user) {
+        setError("User not found");
+        return;
+      }
+
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("university, curriculum_url")
+        .eq("id", user.id)
+        .single();
+
+      if (!profile || !profile.university) {
+        window.location.href = "/onboarding";
+      } else {
+        window.location.href = "/dashboard";
       }
     } catch {
       setError("An unexpected error occurred");
@@ -96,7 +97,7 @@ export function SignInForm() {
           </div>
           {error && <div className="text-sm text-red-500">{error}</div>}
         </CardContent>
-        <CardFooter>
+        <CardFooter className="mt-4">
           <Button type="submit" className="w-full" disabled={loading}>
             {loading ? "Signing in..." : "Sign In"}
           </Button>

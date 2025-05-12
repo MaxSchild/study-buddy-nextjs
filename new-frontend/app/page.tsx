@@ -18,17 +18,15 @@ export default function LandingPage() {
   useEffect(() => {
     async function checkAuth() {
       const supabase = createClient();
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
+      const { data: { user }, error } = await supabase.auth.getUser();
 
-      if (session) {
+      if (!error && user) {
         setIsAuthenticated(true);
         // Check if profile is complete
         const { data: profile } = await supabase
           .from("profiles")
           .select("university, curriculum_url")
-          .eq("id", session.user.id)
+          .eq("id", user.id)
           .single();
 
         setIsProfileComplete(
