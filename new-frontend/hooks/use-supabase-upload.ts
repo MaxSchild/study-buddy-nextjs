@@ -17,6 +17,7 @@ interface FileWithPreview extends File {
 type UseSupabaseUploadOptions = {
   bucketName: string;
   path?: string;
+  userId?: string;
   allowedMimeTypes?: string[];
   maxFileSize?: number;
   maxFiles?: number;
@@ -30,6 +31,7 @@ const useSupabaseUpload = (options: UseSupabaseUploadOptions) => {
   const {
     bucketName,
     path,
+    userId,
     allowedMimeTypes = [],
     maxFileSize = Number.POSITIVE_INFINITY,
     maxFiles = 1,
@@ -105,9 +107,16 @@ const useSupabaseUpload = (options: UseSupabaseUploadOptions) => {
     const supabase = createClient();
     const responses = await Promise.all(
       filesToUpload.map(async (file) => {
+        let uploadPath = file.name;
+        if (userId) {
+          uploadPath = `${userId}/${file.name}`;
+        }
+        if (path) {
+          uploadPath = `${path}/${uploadPath}`;
+        }
         const { error } = await supabase.storage
           .from(bucketName)
-          .upload(!!path ? `${path}/${file.name}` : file.name, file, {
+          .upload(uploadPath, file, {
             cacheControl: cacheControl.toString(),
             upsert,
           });
@@ -129,7 +138,7 @@ const useSupabaseUpload = (options: UseSupabaseUploadOptions) => {
     setSuccesses(newSuccesses);
 
     setLoading(false);
-  }, [files, path, bucketName, errors, successes, cacheControl, upsert]);
+  }, [files, path, bucketName, errors, successes, cacheControl, upsert, userId]);
 
   useEffect(() => {
     if (files.length === 0) {
