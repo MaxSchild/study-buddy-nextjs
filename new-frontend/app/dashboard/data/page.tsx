@@ -58,16 +58,18 @@ export default function DataPage() {
         if (listError) {
           throw new Error("Failed to fetch uploaded files");
         }
-        // Get public URLs for each file
-        const filesWithUrls: SupabaseFile[] = (files || []).map((file) => {
-          const { data: { publicUrl } } = supabase.storage
-            .from("organizational-study-data")
-            .getPublicUrl(`uploads/${user.id}/${file.name}`);
-          return {
-            ...file,
-            url: publicUrl,
-          };
-        });
+        // Generate signed URLs for each file
+        const filePaths = (files || []).map((file) => `uploads/${user.id}/${file.name}`);
+        const { data: signedUrls, error: signedUrlError } = await supabase.storage
+          .from("organizational-study-data")
+          .createSignedUrls(filePaths, 60 * 10); // 10 minutes
+        if (signedUrlError) {
+          throw new Error("Failed to create signed URLs");
+        }
+        const filesWithUrls: SupabaseFile[] = (files || []).map((file, idx) => ({
+          ...file,
+          url: signedUrls?.[idx]?.signedUrl || "",
+        }));
         setUploadedFiles(filesWithUrls);
       } catch (err) {
         setError(err instanceof Error ? err.message : "An unexpected error occurred");
