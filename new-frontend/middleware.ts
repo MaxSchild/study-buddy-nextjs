@@ -34,10 +34,10 @@ export async function middleware(request: NextRequest) {
     }
   )
 
-  const { data: { session } } = await supabase.auth.getSession()
+  const { data: { user }, error } = await supabase.auth.getUser()
 
-  // If there's no session and the user is trying to access a protected route
-  if (!session) {
+  // If there's no user and the user is trying to access a protected route
+  if (error || !user) {
     const protectedRoutes = ['/dashboard', '/onboarding']
     const isProtectedRoute = protectedRoutes.some(route => 
       request.nextUrl.pathname.startsWith(route)
