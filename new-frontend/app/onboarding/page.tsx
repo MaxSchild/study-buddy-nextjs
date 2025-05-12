@@ -43,6 +43,7 @@ export default function OnboardingPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
+  const [submitted, setSubmitted] = useState(false);
   const router = useRouter();
 
   // Fetch user ID on mount
@@ -113,6 +114,7 @@ export default function OnboardingPage() {
         throw new Error("Failed to save profile data");
       }
 
+      setSubmitted(true);
       // Redirect to dashboard on success
       router.push("/dashboard");
     } catch (err) {
@@ -179,10 +181,20 @@ export default function OnboardingPage() {
             <div className="mb-6">
               <Label htmlFor="curriculum">Upload your curriculum</Label>
               {userId ? (
-                <Dropzone {...uploadProps} className="mt-2">
-                  <DropzoneEmptyState />
-                  <DropzoneContent />
-                </Dropzone>
+                submitted ? (
+                  <div className="p-4 bg-green-50 text-green-700 rounded-lg text-center mt-2">
+                    Redirecting...
+                  </div>
+                ) : uploadProps.isSuccess ? (
+                  <div className="p-4 bg-green-50 text-green-700 rounded-lg text-center mt-2">
+                    Files uploaded successfully!
+                  </div>
+                ) : (
+                  <Dropzone {...uploadProps} className="mt-2">
+                    <DropzoneEmptyState />
+                    <DropzoneContent />
+                  </Dropzone>
+                )
               ) : (
                 <div className="text-sm text-gray-500 mt-2">Loading user info...</div>
               )}
