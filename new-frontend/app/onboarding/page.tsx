@@ -195,7 +195,7 @@ export default function OnboardingPage() {
             <Button 
               type="submit" 
               className="w-full" 
-              disabled={loading || !university}
+              disabled={loading || !university || !uploadProps.isSuccess}
             >
               {loading ? (
                 <>
