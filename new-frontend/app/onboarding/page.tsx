@@ -26,16 +26,13 @@ import { Dropzone, DropzoneContent, DropzoneEmptyState } from "@/components/drop
 import { useSupabaseUpload } from "@/hooks/use-supabase-upload";
 import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
+import universitiesData from "../private_data/world_universities_and_domains.json";
 
-const universities = [
-  { value: "harvard", label: "Harvard University" },
-  { value: "mit", label: "MIT" },
-  { value: "stanford", label: "Stanford University" },
-  { value: "oxford", label: "University of Oxford" },
-  { value: "cambridge", label: "University of Cambridge" },
-  { value: "tum", label: "Technical University of Munich" },
-  { value: "ethz", label: "ETH Zurich" },
-];
+// Transform the universities data into the format we need
+const universities = universitiesData.map((uni) => ({
+  value: uni.id, // Use the pre-generated unique ID
+  label: uni.name,
+}));
 
 export default function OnboardingPage() {
   const [university, setUniversity] = useState("");
@@ -157,9 +154,10 @@ export default function OnboardingPage() {
                         {universities.map((u) => (
                           <CommandItem
                             key={u.value}
-                            value={u.value}
+                            value={u.label}
                             onSelect={(currentValue) => {
-                              setUniversity(currentValue === university ? "" : currentValue);
+                              const selectedUni = universities.find(uni => uni.label === currentValue);
+                              setUniversity(selectedUni?.value || "");
                               setOpen(false);
                             }}
                           >
